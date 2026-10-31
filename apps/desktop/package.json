@@ -1,0 +1,16 @@
+{
+  "name": "@mizan/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mizan POS desktop shell (Electron)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "echo \"desktop has no compile step; use npm run dist to package\" && exit 0",
+    "dist": "electron-builder --win --config electron-builder.json"
+  },
+  "devDependencies": {
+    "electron": "33.3.1",
+    "electron-builder": "25.1.8"
+  }
+}

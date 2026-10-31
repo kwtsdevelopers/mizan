@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.angular/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+apps/desktop/release/
+.nyc_output/
+tmp/

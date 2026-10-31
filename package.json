@@ -1,0 +1,28 @@
+{
+  "name": "mizan-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mizan - multi-tenant, offline-capable business management platform",
+  "workspaces": [
+    "libs/shared",
+    "apps/backend",
+    "apps/frontend",
+    "apps/desktop"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "npm run build -w @mizan/shared && npm run build -w @mizan/backend && npm run build -w @mizan/frontend",
+    "build:shared": "npm run build -w @mizan/shared",
+    "build:backend": "npm run build -w @mizan/backend",
+    "build:frontend": "npm run build -w @mizan/frontend",
+    "test": "npm run test -w @mizan/shared && npm run test -w @mizan/backend",
+    "test:shared": "npm run test -w @mizan/shared",
+    "test:backend": "npm run test -w @mizan/backend",
+    "start:backend": "npm run start:dev -w @mizan/backend",
+    "start:frontend": "npm run start -w @mizan/frontend",
+    "start:desktop": "npm run start -w @mizan/desktop",
+    "lint": "npm run lint -w @mizan/backend --if-present && npm run lint -w @mizan/frontend --if-present"
+  }
+}

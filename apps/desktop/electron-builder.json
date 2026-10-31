@@ -1,0 +1,22 @@
+{
+  "appId": "com.mizan.pos",
+  "productName": "Mizan POS",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "main.js",
+    "preload.js",
+    {
+      "from": "../frontend/dist/frontend/browser",
+      "to": "frontend/dist/frontend/browser"
+    }
+  ],
+  "win": {
+    "target": "nsis"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}

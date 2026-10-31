@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build shared library
+        run: npm run build -w @mizan/shared
+      - name: Build backend
+        run: npm run build -w @mizan/backend
+      - name: Unit tests (shared)
+        run: npm run test -w @mizan/shared
+      - name: Unit tests (backend)
+        run: npm run test -w @mizan/backend
+      - name: E2E tests (backend, in-memory MongoDB)
+        run: npm run test:e2e -w @mizan/backend
+      - name: Build frontend
+        run: npm run build -w @mizan/frontend --if-present
+      - name: Dependency audit (high severity gate)
+        run: npm audit --audit-level=critical
