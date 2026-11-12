@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, errMsg, fmtMilli } from '../../core/api.service';
+import { UiSelectComponent } from '../../ui/ui-select.component';
 
 interface Branch {
   _id: string;
@@ -23,77 +24,18 @@ interface ProductHit {
 @Component({
   selector: 'app-inventory',
   standalone: true,
-  imports: [FormsModule],
-  template: `
-    <h1>Inventory</h1>
-    <div class="card">
-      <div class="toolbar">
-        <select name="branch" [(ngModel)]="branchId" (ngModelChange)="load()" style="max-width: 240px">
-          @for (b of branches(); track b._id) {
-            <option [value]="b._id">{{ b.name }}</option>
-          }
-        </select>
-        <span class="spacer"></span>
-      </div>
-      @if (error()) {
-        <p class="error-text">{{ error() }}</p>
-      }
-      <table class="grid">
-        <thead><tr><th>SKU</th><th>Product</th><th class="num">On hand</th><th></th></tr></thead>
-        <tbody>
-          @for (l of levels(); track l.productId) {
-            <tr>
-              <td>{{ l.product?.sku }}</td>
-              <td>{{ l.product?.name }}</td>
-              <td class="num" [class.error-text]="l.qtyMilli < 0">{{ fmtQty(l.qtyMilli) }}</td>
-              <td><button class="btn btn-sm" (click)="startAdjust(l)">Adjust</button></td>
-            </tr>
-          } @empty {
-            <tr><td colspan="4" class="muted">No stock records for this branch.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>Stock adjustment</h2>
-      <div class="row">
-        <div>
-          <label>Product (search by name/SKU)</label>
-          <input name="psearch" [(ngModel)]="productSearch" (keyup.enter)="findProduct()" placeholder="Enter to search" />
-          @if (productHit()) {
-            <p class="muted">Selected: {{ productHit()!.name }} ({{ productHit()!.sku }})</p>
-          }
-        </div>
-        <div>
-          <label>Quantity (+/- units, e.g. 5 or -2.5)</label>
-          <input name="qty" [(ngModel)]="adjustQty" inputmode="decimal" />
-        </div>
-        <div>
-          <label>Type</label>
-          <select name="type" [(ngModel)]="adjustType">
-            <option value="adjustment">Adjustment</option>
-            <option value="waste">Waste / damage</option>
-          </select>
-        </div>
-        <div>
-          <label>Reason</label>
-          <input name="reason" [(ngModel)]="adjustReason" placeholder="Stock count correction…" />
-        </div>
-      </div>
-      <div class="toolbar" style="margin-top: 12px">
-        <button class="btn btn-primary" (click)="applyAdjustment()" [disabled]="!productHit() || busy()">Apply</button>
-        @if (message()) {
-          <span class="muted">{{ message() }}</span>
-        }
-      </div>
-    </div>
-  `,
+  imports: [FormsModule, UiSelectComponent],
+  templateUrl: './inventory.component.html',
 })
 export class InventoryComponent implements OnInit {
   private readonly api = inject(ApiService);
 
   readonly branches = signal<Branch[]>([]);
+  readonly branchOptions = computed(() => this.branches().map((b) => ({ value: b._id, label: b.name })));
+  readonly adjustTypeOptions = [
+    { value: 'adjustment', label: 'Adjustment' },
+    { value: 'waste', label: 'Waste / damage' },
+  ];
   readonly levels = signal<Level[]>([]);
   readonly error = signal('');
   readonly message = signal('');

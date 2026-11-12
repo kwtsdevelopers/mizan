@@ -1,0 +1,71 @@
+
+<h1>Sales</h1>
+<div class="card">
+  @if (error()) {
+    <p class="error-text">{{ error() }}</p>
+  }
+  <table class="grid">
+    <thead>
+      <tr><th>Number</th><th>Date</th><th class="num">Total</th><th>Status</th><th>Source</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (s of sales(); track s._id) {
+        <tr>
+          <td>{{ s.saleNumber }}</td>
+          <td>{{ s.occurredAt | date: 'short' }}</td>
+          <td class="num">{{ fmt(s.totalMinor) }}</td>
+          <td>
+            <span class="badge" [class.badge-ok]="s.status === 'completed'"
+              [class.badge-warn]="s.status === 'partially_refunded'"
+              [class.badge-danger]="s.status === 'refunded' || s.status === 'voided'">
+              {{ s.status }}
+            </span>
+          </td>
+          <td>
+            @if (s.offline) {
+              <span class="badge badge-warn">offline</span>
+            } @else {
+              <span class="badge badge-muted">online</span>
+            }
+          </td>
+          <td>
+            @if (s.status === 'completed' || s.status === 'partially_refunded') {
+              <button class="btn btn-sm" (click)="selected.set(s)">Refund…</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="6" class="muted">No sales yet.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (selected(); as sale) {
+  <div class="card">
+    <h2>Refund {{ sale.saleNumber }}</h2>
+    <table class="grid">
+      <thead><tr><th>Item</th><th class="num">Sold qty</th><th class="num">Refund qty</th></tr></thead>
+      <tbody>
+        @for (l of sale.lines; track l.productId; let i = $index) {
+          <tr>
+            <td>{{ l.description }}</td>
+            <td class="num">{{ fmtQty(l.qtyMilli) }}</td>
+            <td class="num">
+              <input style="width: 90px" [(ngModel)]="refundQty[l.productId]" name="rq{{ i }}" inputmode="decimal" placeholder="0" />
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <label>Reason</label>
+    <input name="reason" [(ngModel)]="refundReason" placeholder="Damaged item…" />
+    <div class="toolbar" style="margin-top: 12px">
+      <button class="btn btn-danger" (click)="refund(sale)" [disabled]="busy()">Process refund</button>
+      <button class="btn" (click)="selected.set(null)">Cancel</button>
+      @if (message()) {
+        <span class="muted">{{ message() }}</span>
+      }
+    </div>
+  </div>
+}

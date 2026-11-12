@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ApiService, errMsg, fmtMilli, fmtMinor, parseMinor } from '../../core/api.service';
+import { UiSelectComponent } from '../../ui/ui-select.component';
 
 interface Supplier {
   _id: string;
@@ -38,117 +39,8 @@ interface ProductHit {
 @Component({
   selector: 'app-purchasing',
   standalone: true,
-  imports: [FormsModule, DatePipe],
-  template: `
-    <h1>Purchasing</h1>
-    @if (error()) {
-      <p class="error-text">{{ error() }}</p>
-    }
-    <div class="card">
-      <div class="toolbar">
-        <h2 style="margin: 0">Purchase orders</h2>
-        <span class="spacer"></span>
-        <button class="btn btn-primary" (click)="startNew()">New PO</button>
-      </div>
-      <table class="grid">
-        <thead><tr><th>PO</th><th>Supplier</th><th>Date</th><th class="num">Total</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          @for (po of orders(); track po._id) {
-            <tr>
-              <td>{{ po.poNumber }}</td>
-              <td>{{ po.supplierName ?? po.supplierId }}</td>
-              <td>{{ po.createdAt | date: 'shortDate' }}</td>
-              <td class="num">{{ fmt(po.totalMinor) }}</td>
-              <td><span class="badge badge-muted">{{ po.status }}</span></td>
-              <td>
-                @if (po.status === 'ordered' || po.status === 'partially_received') {
-                  <button class="btn btn-sm" (click)="startReceive(po)">Receive…</button>
-                }
-              </td>
-            </tr>
-          } @empty {
-            <tr><td colspan="6" class="muted">No purchase orders.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    @if (creating()) {
-      <div class="card">
-        <h2>New purchase order</h2>
-        <div class="row">
-          <div>
-            <label>Supplier</label>
-            <select name="supplier" [(ngModel)]="supplierId">
-              @for (s of suppliers(); track s._id) {
-                <option [value]="s._id">{{ s.name }}</option>
-              }
-            </select>
-          </div>
-          <div>
-            <label>Deliver to branch</label>
-            <select name="pobranch" [(ngModel)]="branchId">
-              @for (b of branches(); track b._id) {
-                <option [value]="b._id">{{ b.name }}</option>
-              }
-            </select>
-          </div>
-        </div>
-        <div class="toolbar" style="margin-top: 10px">
-          <input name="psearch" [(ngModel)]="productSearch" placeholder="Search product, Enter to add" (keyup.enter)="addProduct()" style="max-width: 320px" />
-        </div>
-        <table class="grid">
-          <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Unit cost</th><th></th></tr></thead>
-          <tbody>
-            @for (l of newLines(); track l.productId; let i = $index) {
-              <tr>
-                <td>{{ l.name }}</td>
-                <td class="num"><input style="width: 80px" [(ngModel)]="l.qty" name="nq{{ i }}" inputmode="decimal" /></td>
-                <td class="num"><input style="width: 90px" [(ngModel)]="l.cost" name="nc{{ i }}" inputmode="decimal" /></td>
-                <td><button class="btn btn-sm" (click)="removeLine(i)">×</button></td>
-              </tr>
-            } @empty {
-              <tr><td colspan="4" class="muted">Add products above.</td></tr>
-            }
-          </tbody>
-        </table>
-        <div class="toolbar" style="margin-top: 12px">
-          <button class="btn btn-primary" (click)="createPo()" [disabled]="busy() || newLines().length === 0">Create PO</button>
-          <button class="btn" (click)="creating.set(false)">Cancel</button>
-        </div>
-      </div>
-    }
-
-    @if (receiving(); as po) {
-      <div class="card">
-        <h2>Receive against {{ po.poNumber }}</h2>
-        <div class="row">
-          <div><label>Batch number (optional)</label><input name="batch" [(ngModel)]="batchNumber" /></div>
-          <div><label>Expiry date (optional)</label><input name="expiry" type="date" [(ngModel)]="expiryDate" /></div>
-        </div>
-        <table class="grid">
-          <thead><tr><th>Product</th><th class="num">Ordered</th><th class="num">Received</th><th class="num">Receive now</th></tr></thead>
-          <tbody>
-            @for (l of po.lines; track l.productId; let i = $index) {
-              <tr>
-                <td>{{ l.productName ?? l.productId }}</td>
-                <td class="num">{{ fmtQty(l.qtyMilli) }}</td>
-                <td class="num">{{ fmtQty(l.receivedQtyMilli) }}</td>
-                <td class="num"><input style="width: 90px" [(ngModel)]="receiveQty[l.productId]" name="rr{{ i }}" inputmode="decimal" placeholder="0" /></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <div class="toolbar" style="margin-top: 12px">
-          <button class="btn btn-primary" (click)="receive(po)" [disabled]="busy()">Receive</button>
-          <button class="btn" (click)="receiving.set(null)">Cancel</button>
-          @if (message()) {
-            <span class="muted">{{ message() }}</span>
-          }
-        </div>
-      </div>
-    }
-  `,
+  imports: [FormsModule, DatePipe, UiSelectComponent],
+  templateUrl: './purchasing.component.html',
 })
 export class PurchasingComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -156,6 +48,8 @@ export class PurchasingComponent implements OnInit {
   readonly orders = signal<PurchaseOrder[]>([]);
   readonly suppliers = signal<Supplier[]>([]);
   readonly branches = signal<Array<{ _id: string; name: string }>>([]);
+  readonly supplierOptions = computed(() => this.suppliers().map((s) => ({ value: s._id, label: s.name })));
+  readonly branchOptions = computed(() => this.branches().map((b) => ({ value: b._id, label: b.name })));
   readonly creating = signal(false);
   readonly receiving = signal<PurchaseOrder | null>(null);
   readonly newLines = signal<Array<{ productId: string; name: string; qty: string; cost: string }>>([]);

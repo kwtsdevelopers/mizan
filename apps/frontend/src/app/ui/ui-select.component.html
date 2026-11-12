@@ -1,0 +1,27 @@
+<button type="button" class="trigger" [class.open]="open()" [disabled]="disabled()" (click)="toggle()">
+  <span class="label" [class.ph]="!selectedLabel()">{{ selectedLabel() ?? placeholder() }}</span>
+  <svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+    <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+</button>
+
+@if (open()) {
+  <div class="menu" role="listbox">
+    @for (opt of options(); track opt.value) {
+      <button
+        type="button"
+        class="opt"
+        role="option"
+        [class.sel]="opt.value === value()"
+        [attr.aria-selected]="opt.value === value()"
+        (click)="pick(opt)"
+      >
+        <span class="check">✓</span>
+        <span>{{ opt.label }}</span>
+      </button>
+    }
+    @if (!options().length) {
+      <div class="empty">No options</div>
+    }
+  </div>
+}

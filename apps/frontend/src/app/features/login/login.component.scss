@@ -1,0 +1,295 @@
+
+:host { display: block; }
+
+/* ============ Full-bleed cinematic stage ============ */
+.stage {
+  position: relative; min-height: 100vh; overflow: clip;
+  background: #06070c; color: #fff;
+  display: flex; flex-direction: column;
+}
+/* per-industry gradient world */
+.bg {
+  position: absolute; inset: 0; opacity: 0; pointer-events: none;
+  transition: opacity 1.3s ease;
+  background:
+    radial-gradient(90rem 62rem at 10% -12%, color-mix(in srgb, var(--g1) 36%, transparent), transparent 62%),
+    radial-gradient(74rem 52rem at 96% 22%, color-mix(in srgb, var(--g2) 32%, transparent), transparent 64%),
+    radial-gradient(64rem 46rem at 52% 118%, color-mix(in srgb, var(--g1) 24%, transparent), transparent 60%),
+    linear-gradient(150deg, var(--g3) 0%, #05060b 78%);
+}
+.bg.on { opacity: 1; }
+/* living colour: drifting blobs + rotating aurora + film grain */
+.blob {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  filter: blur(90px); mix-blend-mode: screen;
+  transition: background 1.3s ease;
+}
+.bl1 { width: 46vw; height: 46vw; left: -13vw; top: -16vw; opacity: 0.5; background: var(--accent); animation: drift1 16s ease-in-out infinite; }
+.bl2 { width: 38vw; height: 38vw; right: -11vw; top: 18%; opacity: 0.42; background: var(--accent2); animation: drift2 20s ease-in-out infinite; }
+.bl3 { width: 30vw; height: 30vw; left: 32%; bottom: -17vw; opacity: 0.3; background: var(--accent); animation: drift3 24s ease-in-out infinite; }
+@keyframes drift1 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(7vw, 5vw) scale(1.15); } }
+@keyframes drift2 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-6vw, -4vw) scale(0.88); } }
+@keyframes drift3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(5vw, -5vw) scale(1.2); } }
+.aurora {
+  position: absolute; inset: -42%; pointer-events: none;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    color-mix(in srgb, var(--accent) 15%, transparent) 70deg,
+    transparent 150deg,
+    color-mix(in srgb, var(--accent2) 13%, transparent) 240deg,
+    transparent 330deg);
+  mix-blend-mode: screen;
+  animation: sweep 30s linear infinite;
+}
+@keyframes sweep { to { transform: rotate(360deg); } }
+.grain {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.scrim {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(100deg, rgba(3, 5, 9, 0.68) 0%, rgba(3, 5, 9, 0.3) 44%, transparent 68%),
+    linear-gradient(0deg, rgba(3, 5, 9, 0.72) 0%, transparent 32%);
+}
+
+/* ============ Brand ============ */
+.brand {
+  position: relative; z-index: 3;
+  display: flex; align-items: center; gap: 11px;
+  padding: 30px clamp(26px, 5vw, 72px) 0;
+}
+.mlogo {
+  width: 40px; height: 40px; border-radius: 11px;
+  display: grid; place-items: center;
+  font-size: 21px; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), rgba(255, 255, 255, 0.25));
+  color: #06120c;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: background 0.8s;
+}
+.brand strong { font-size: 19px; letter-spacing: 0.04em; }
+
+/* ============ Giant kinetic typography ============ */
+.hero {
+  position: relative; z-index: 3; flex: 1;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 clamp(26px, 5vw, 72px);
+  max-width: 860px;
+  pointer-events: none;
+}
+.eyebrow {
+  margin: 0 0 14px; font-size: 13px; font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent); transition: color 0.8s;
+  animation: soft-in 0.8s ease both;
+}
+.built {
+  font-size: clamp(26px, 3vw, 40px); font-weight: 500;
+  color: rgba(255, 255, 255, 0.82); letter-spacing: -0.01em;
+}
+.word {
+  display: flex; flex-wrap: nowrap; overflow: hidden;
+  margin: 2px 0 0; line-height: 1.08;
+  font-size: min(8.4vw, 90px); font-weight: 860; letter-spacing: -0.035em;
+  filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.45));
+}
+.ltr {
+  display: inline-block;
+  background: linear-gradient(125deg, #ffffff 8%, var(--accent) 55%, var(--accent2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  animation: ltr-up 0.72s cubic-bezier(0.19, 0.8, 0.22, 1) both;
+}
+@keyframes ltr-up {
+  from { transform: translateY(112%) rotate(4deg); opacity: 0; }
+  to { transform: translateY(0) rotate(0deg); opacity: 1; }
+}
+.enddot {
+  background: none; -webkit-background-clip: initial; background-clip: initial;
+  color: var(--accent); -webkit-text-fill-color: var(--accent);
+  transition: color 0.8s;
+}
+.punch {
+  margin: 20px 0 0; font-size: clamp(16px, 1.5vw, 21px);
+  color: rgba(255, 255, 255, 0.88); font-weight: 500; max-width: 540px;
+  animation: soft-in 0.7s ease 0.45s both;
+}
+@keyframes soft-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ============ Story flow: “one shift with Mizan” ============ */
+.flowtag {
+  margin: 26px 0 12px; font-size: 11.5px; font-weight: 800;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 85%, #fff);
+  animation: soft-in 0.6s ease 0.5s both;
+}
+.flow { position: relative; display: flex; gap: 12px; max-width: 660px; }
+.flow::before {
+  content: ''; position: absolute; left: 5%; right: 5%; top: 30px; height: 2px;
+  background: repeating-linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 60%, transparent) 0 10px, transparent 10px 18px);
+  opacity: 0.45;
+  animation: dashflow 0.9s linear infinite;
+}
+@keyframes dashflow { to { background-position: 18px 0; } }
+.stop {
+  position: relative; flex: 1; min-width: 0;
+  padding: 14px 13px 12px; border-radius: 17px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+  animation:
+    stop-in 0.55s cubic-bezier(0.2, 0.85, 0.3, 1.15) both,
+    stop-live 4.6s ease infinite;
+}
+.sico { display: block; font-size: 23px; margin-bottom: 8px; filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.4)); }
+.stop b { display: block; font-size: 13px; letter-spacing: 0.01em; }
+.stop small { display: block; margin-top: 4px; font-size: 11px; line-height: 1.4; color: rgba(255, 255, 255, 0.62); }
+@keyframes stop-in { from { opacity: 0; transform: translateY(16px) scale(0.94); } to { opacity: 1; transform: none; } }
+/* sequential ignition travelling along the flow (uses translate so it composes with stop-in) */
+@keyframes stop-live {
+  0%, 24%, 100% { translate: 0 0; border-color: rgba(255, 255, 255, 0.14); box-shadow: none; background: rgba(255, 255, 255, 0.07); }
+  6%, 16% {
+    translate: 0 -7px;
+    border-color: color-mix(in srgb, var(--accent) 85%, transparent);
+    box-shadow: 0 16px 44px color-mix(in srgb, var(--accent) 32%, transparent);
+    background: color-mix(in srgb, var(--accent) 13%, rgba(255, 255, 255, 0.06));
+  }
+}
+
+/* ============ Industry rail (auto progress, Apple-style) ============ */
+.rail {
+  position: relative; z-index: 3;
+  display: flex; flex-wrap: wrap; gap: clamp(14px, 2.4vw, 34px);
+  padding: 0 clamp(26px, 5vw, 72px) 34px;
+}
+.rail button {
+  appearance: none; background: none; border: 0; padding: 0;
+  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; cursor: pointer;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.35s;
+}
+.rail button:hover { color: rgba(255, 255, 255, 0.75); }
+.rail button.on { color: #fff; }
+.rail i {
+  display: block; height: 2px; margin-top: 8px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18); overflow: hidden;
+}
+.rail em { display: block; height: 100%; width: 0; background: var(--accent); }
+.rail em.run { animation: rail-fill 5s linear forwards; }
+@keyframes rail-fill { from { width: 0; } to { width: 100%; } }
+
+/* ============ Floating sign-in (same canvas, no split) ============ */
+.sign {
+  position: absolute; z-index: 4;
+  right: clamp(26px, 5vw, 72px); top: 50%; transform: translateY(-50%);
+  width: 344px; padding: 30px 28px 24px;
+  border-radius: 26px;
+  background: rgba(6, 11, 9, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.55);
+  animation: sign-in 0.9s cubic-bezier(0.2, 0.85, 0.25, 1.1) 0.2s both;
+}
+@keyframes sign-in { from { opacity: 0; transform: translateY(calc(-50% + 30px)); } to { opacity: 1; transform: translateY(-50%); } }
+.sign h2 { margin: 0; font-size: 23px; font-weight: 800; letter-spacing: -0.01em; }
+.sign .sub { margin: 5px 0 18px; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
+
+.modes { display: flex; gap: 18px; margin-bottom: 20px; }
+.modes button {
+  appearance: none; background: none; border: 0; padding: 0 0 6px;
+  font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  color: rgba(255, 255, 255, 0.5);
+  border-bottom: 2px solid transparent;
+  transition: color 0.25s, border-color 0.25s;
+}
+.modes button.on { color: #fff; border-bottom-color: var(--accent); }
+
+.f { position: relative; margin-bottom: 14px; }
+.f input {
+  width: 100%; box-sizing: border-box;
+  padding: 20px 16px 8px; border-radius: 13px;
+  font: inherit; font-size: 14.5px; color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  outline: none;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+}
+.f input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.f label {
+  position: absolute; left: 16px; top: 15px;
+  font-size: 13.5px; color: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  transition: top 0.18s ease, font-size 0.18s ease, color 0.18s ease;
+}
+.f input:focus + label,
+.f input:not(:placeholder-shown) + label {
+  top: 6px; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent);
+}
+
+.err { margin: 2px 0 10px; font-size: 12.5px; font-weight: 600; color: #ff9c8a; }
+
+.go {
+  width: 100%; margin-top: 4px; padding: 14px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; border-radius: 13px; cursor: pointer;
+  font: inherit; font-size: 15px; font-weight: 800; color: #06120c;
+  background: var(--accent);
+  transition: transform 0.15s, box-shadow 0.2s, filter 0.2s, background 0.8s;
+}
+.go:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--accent) 45%, transparent);
+  filter: brightness(1.06);
+}
+.go:disabled { opacity: 0.75; cursor: default; }
+.go .arrow { transition: transform 0.2s; }
+.go:not(:disabled):hover .arrow { transform: translateX(4px); }
+.spin {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(6, 18, 12, 0.3); border-top-color: #06120c;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.assure { margin: 16px 0 0; text-align: center; font-size: 11.5px; color: rgba(255, 255, 255, 0.5); }
+
+.shake { animation: shake 0.4s ease; }
+@keyframes shake {
+  0%, 100% { translate: 0 0; }
+  20% { translate: -8px 0; } 40% { translate: 8px 0; }
+  60% { translate: -5px 0; } 80% { translate: 5px 0; }
+}
+/* keep centering while shaking */
+.sign.shake { animation: shake 0.4s ease; }
+
+/* ============ Responsive ============ */
+@media (max-width: 1100px) {
+  .hero { max-width: 58vw; }
+  .word { font-size: min(5.6vw, 60px); }
+  .sign { width: 320px; }
+  .flow { flex-wrap: wrap; }
+  .stop { flex: 1 1 42%; }
+  .flow::before { display: none; }
+}
+@media (max-width: 920px) {
+  .stage { overflow-y: auto; }
+  .hero { max-width: none; padding-top: 26px; }
+  .word { font-size: min(10.2vw, 68px); }
+  .sign {
+    position: relative; right: auto; top: auto; transform: none;
+    margin: 30px auto 26px; width: min(92vw, 360px);
+    animation: soft-in 0.7s ease 0.2s both;
+  }
+  .rail { order: 5; padding-bottom: 26px; }
+  .blob { filter: blur(60px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0.01s !important; }
+}

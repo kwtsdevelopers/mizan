@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ApiService, errMsg } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { UiSelectComponent } from '../../ui/ui-select.component';
 
 interface Branch {
   _id: string;
@@ -32,92 +33,8 @@ const ROLES = ['owner', 'admin', 'branch_manager', 'cashier', 'inventory_operato
 @Component({
   selector: 'app-org',
   standalone: true,
-  imports: [FormsModule, DatePipe],
-  template: `
-    <h1>Organization</h1>
-    @if (error()) {
-      <p class="error-text">{{ error() }}</p>
-    }
-    <div class="card">
-      <div class="toolbar">
-        <h2 style="margin: 0">Branches</h2>
-        <span class="spacer"></span>
-        <input name="bname" [(ngModel)]="branchName" placeholder="Branch name" style="max-width: 200px" />
-        <input name="bcode" [(ngModel)]="branchCode" placeholder="CODE" style="max-width: 100px" />
-        <button class="btn btn-primary btn-sm" (click)="addBranch()">Add</button>
-      </div>
-      <table class="grid">
-        <thead><tr><th>Code</th><th>Name</th><th>Status</th></tr></thead>
-        <tbody>
-          @for (b of branches(); track b._id) {
-            <tr>
-              <td>{{ b.code }}</td>
-              <td>{{ b.name }}</td>
-              <td><span class="badge" [class.badge-ok]="b.active" [class.badge-muted]="!b.active">{{ b.active ? 'Active' : 'Inactive' }}</span></td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <div class="toolbar">
-        <h2 style="margin: 0">Users</h2>
-        <span class="spacer"></span>
-        <button class="btn btn-primary btn-sm" (click)="creatingUser.set(!creatingUser())">New user</button>
-      </div>
-      @if (creatingUser()) {
-        <div class="row">
-          <div><label>Name</label><input name="uname" [(ngModel)]="newUser.name" /></div>
-          <div><label>Email</label><input name="uemail" [(ngModel)]="newUser.email" /></div>
-          <div><label>Password</label><input name="upass" type="password" [(ngModel)]="newUser.password" /></div>
-          <div>
-            <label>Role</label>
-            <select name="urole" [(ngModel)]="newUser.role">
-              @for (r of roles; track r) {
-                <option [value]="r">{{ r }}</option>
-              }
-            </select>
-          </div>
-        </div>
-        <button class="btn btn-primary btn-sm" style="margin-top: 10px" (click)="createUser()" [disabled]="busy()">Create</button>
-      }
-      <table class="grid" style="margin-top: 10px">
-        <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          @for (u of users(); track u._id) {
-            <tr>
-              <td>{{ u.name }}</td>
-              <td>{{ u.email }}</td>
-              <td>{{ u.roles.join(', ') }}</td>
-              <td><span class="badge" [class.badge-ok]="u.status === 'active'" [class.badge-danger]="u.status !== 'active'">{{ u.status === 'active' ? 'Active' : 'Disabled' }}</span></td>
-              <td>
-                <button class="btn btn-sm" (click)="toggleUser(u)">{{ u.status === 'active' ? 'Disable' : 'Enable' }}</button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>Audit log</h2>
-      <table class="grid">
-        <thead><tr><th>When</th><th>Actor</th><th>Action</th></tr></thead>
-        <tbody>
-          @for (a of audit(); track a._id) {
-            <tr>
-              <td>{{ a.at | date: 'short' }}</td>
-              <td>{{ a.actorId }}</td>
-              <td>{{ a.action }}</td>
-            </tr>
-          } @empty {
-            <tr><td colspan="3" class="muted">No audit events.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  `,
+  imports: [FormsModule, DatePipe, UiSelectComponent],
+  templateUrl: './org.component.html',
 })
 export class OrgComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -131,6 +48,7 @@ export class OrgComponent implements OnInit {
   readonly creatingUser = signal(false);
 
   readonly roles = ROLES;
+  readonly roleOptions = ROLES.map((r) => ({ value: r, label: r }));
   branchName = '';
   branchCode = '';
   newUser = { name: '', email: '', password: '', role: 'cashier' };

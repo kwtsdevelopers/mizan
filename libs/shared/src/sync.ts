@@ -18,7 +18,7 @@ export interface OfflineSaleLine {
 }
 
 export interface OfflinePayment {
-  method: 'cash' | 'card' | 'other';
+  method: 'cash' | 'card' | 'wallet' | 'loyalty' | 'other';
   amountMinor: number;
   reference?: string;
 }

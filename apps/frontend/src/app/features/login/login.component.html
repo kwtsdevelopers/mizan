@@ -1,0 +1,88 @@
+
+<div class="stage" [style.--accent]="industries[ind()].accent" [style.--accent2]="industries[ind()].c2">
+  <!-- vibrant per-industry gradient world, crossfaded -->
+  @for (s of industries; track s.word) {
+    <div class="bg" [class.on]="$index === ind()" [style.--g1]="s.accent" [style.--g2]="s.c2" [style.--g3]="s.deep"></div>
+  }
+  <div class="blob bl1"></div>
+  <div class="blob bl2"></div>
+  <div class="blob bl3"></div>
+  <div class="aurora"></div>
+  <div class="grain"></div>
+  <div class="scrim"></div>
+
+  <header class="brand">
+    <span class="mlogo">M</span>
+    <strong>Mizan</strong>
+  </header>
+
+  <main class="hero">
+    <p class="eyebrow">One platform · Every business</p>
+    <div class="built">Built for</div>
+    @for (s of industries; track s.word) {
+      @if ($index === ind()) {
+        <h1 class="word">
+          @for (ch of s.word.split(''); track $index) {
+            <span class="ltr" [style.animation-delay.ms]="$index * 42">{{ ch }}</span>
+          }<span class="ltr enddot" [style.animation-delay.ms]="s.word.length * 42">.</span>
+        </h1>
+        <p class="punch">{{ s.line }}</p>
+        <p class="flowtag">{{ s.tag }}</p>
+        <div class="flow">
+          @for (st of s.stops; track st.t) {
+            <div class="stop" [style.animationDelay]="(550 + $index * 130) + 'ms, ' + (900 + $index * 1150) + 'ms'">
+              <span class="sico">{{ st.i }}</span>
+              <b>{{ st.t }}</b>
+              <small>{{ st.d }}</small>
+            </div>
+          }
+        </div>
+      }
+    }
+  </main>
+
+  <nav class="rail">
+    @for (s of industries; track s.word) {
+      <button type="button" [class.on]="$index === ind()" (click)="go($index)">
+        {{ s.word }}
+        <i><em [class.run]="$index === ind()"></em></i>
+      </button>
+    }
+  </nav>
+
+  <aside class="sign" [class.shake]="error()">
+    <h2>Welcome back</h2>
+    <p class="sub">Sign in to your workspace</p>
+    <div class="modes">
+      <button type="button" [class.on]="mode() === 'tenant'" (click)="mode.set('tenant')">My business</button>
+      <button type="button" [class.on]="mode() === 'platform'" (click)="mode.set('platform')">Platform admin</button>
+    </div>
+    <form (ngSubmit)="submit()">
+      @if (mode() === 'tenant') {
+        <div class="f">
+          <input name="slug" [(ngModel)]="slug" required placeholder=" " autocomplete="organization" />
+          <label>Business ID</label>
+        </div>
+      }
+      <div class="f">
+        <input name="email" type="email" [(ngModel)]="email" required placeholder=" " autocomplete="username" />
+        <label>Email</label>
+      </div>
+      <div class="f">
+        <input name="password" type="password" [(ngModel)]="password" required placeholder=" " autocomplete="current-password" />
+        <label>Password</label>
+      </div>
+      @if (error()) {
+        <p class="err">{{ error() }}</p>
+      }
+      <button class="go" type="submit" [disabled]="busy()">
+        @if (busy()) {
+          <span class="spin"></span> Signing in…
+        } @else {
+          Sign in <span class="arrow">→</span>
+        }
+      </button>
+    </form>
+    <p class="assure">Works offline · Syncs by itself</p>
+  </aside>
+</div>

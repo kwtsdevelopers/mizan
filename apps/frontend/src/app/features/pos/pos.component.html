@@ -1,0 +1,247 @@
+
+<div class="pos">
+  <!-- ======= top bar ======= -->
+  <header class="top">
+    <ui-select class="branch" name="branch" [(ngModel)]="branchId" [options]="branchOptions()" />
+    <form class="scanform" (ngSubmit)="scan()">
+      <input
+        #scanbox
+        name="code"
+        [(ngModel)]="code"
+        (ngModelChange)="onSearchChange($event)"
+        placeholder="🔍  Scan barcode or type to search, Enter to add"
+        autocomplete="off"
+        autofocus
+      />
+    </form>
+    <button type="button" class="tbtn" (click)="holdsOpen.set(true)">
+      ⏸ Held bills @if (holds().length) {<b class="pill">{{ holds().length }}</b>}
+    </button>
+    <span class="badge" [class.badge-ok]="queue.online()" [class.badge-danger]="!queue.online()">
+      {{ queue.online() ? 'Online' : 'Offline' }}
+    </span>
+    @if (queue.pendingCount() > 0) {
+      <button type="button" class="tbtn" (click)="queue.syncNow()" [disabled]="queue.syncing() || !queue.online()">
+        ⟳ Sync {{ queue.pendingCount() }}
+      </button>
+    }
+  </header>
+
+  @if (error()) {
+    <p class="error-text" style="margin: 8px 0 0">{{ error() }}</p>
+  }
+
+  <div class="body">
+    <!-- ======= product tiles ======= -->
+    <section class="shop">
+      <div class="tiles">
+        @for (p of products(); track p._id) {
+          <button type="button" class="tile" (click)="add(p)">
+            <span class="tname">{{ p.name }}</span>
+            <span class="tprice">{{ fmt(p.priceMinor) }}@if (p.kind === 'weighted') {<small>/kg</small>}</span>
+          </button>
+        } @empty {
+          <p class="muted" style="padding: 16px">No products found. Try a different search.</p>
+        }
+      </div>
+    </section>
+
+    <!-- ======= till ======= -->
+    <aside class="till">
+      <!-- cart -->
+      <div class="panel cart">
+        @for (c of calc().lines; track c.line.product._id; let i = $index) {
+          <div class="cline">
+            <div class="cinfo">
+              <span class="cname">{{ c.line.product.name }}</span>
+              <span class="cmeta">
+                {{ fmt(c.line.product.priceMinor) }}
+                @if (c.line.product.kind === 'weighted') {<small>/kg</small>}
+                @if (c.discMinor > 0) { · disc −{{ fmt(c.discMinor) }} }
+              </span>
+            </div>
+            <div class="qty">
+              <button type="button" class="qbtn" (click)="dec(i)">−</button>
+              <input
+                class="qin"
+                inputmode="decimal"
+                [value]="fmtQty(c.line.qtyMilli)"
+                (change)="setQty(i, $any($event.target).value)"
+              />
+              <button type="button" class="qbtn" (click)="inc(i)">+</button>
+            </div>
+            <span class="ctotal">{{ fmt(c.totalMinor) }}</span>
+            <button type="button" class="xbtn" (click)="remove(i)">✕</button>
+          </div>
+        } @empty {
+          <p class="muted empty">Tap a product or scan a barcode to start a bill.</p>
+        }
+        @if (cart().length) {
+          <div class="cart-actions">
+            <button type="button" class="tbtn" (click)="holdBill()">⏸ Hold bill</button>
+            <button type="button" class="tbtn" (click)="clearCart()">🗑 Clear</button>
+          </div>
+        }
+      </div>
+
+      <!-- customer -->
+      <div class="panel">
+        @if (customer(); as cu) {
+          <div class="cust">
+            <div class="cust-head">
+              <b>👤 {{ cu.name }}</b>
+              <button type="button" class="xbtn" (click)="clearCustomer()">✕</button>
+            </div>
+            <div class="cust-bal">
+              <span>💰 Wallet <b>{{ fmt(cu.walletMinor) }}</b></span>
+              <span>⭐ Points <b>{{ cu.loyaltyPoints }}</b></span>
+              <span class="muted">earns +{{ earnPreview() }} ⭐</span>
+            </div>
+            <div class="cust-tools">
+              <input class="mini" inputmode="decimal" placeholder="Top-up amount" [(ngModel)]="topupStr" name="topup" />
+              <button type="button" class="tbtn" (click)="topUp(cu)" [disabled]="busy()">+ Wallet</button>
+              <input class="mini" inputmode="numeric" placeholder="Points" [(ngModel)]="pointsStr" name="pts" />
+              <button type="button" class="tbtn" (click)="addPoints(cu)" [disabled]="busy()">+ Points</button>
+            </div>
+          </div>
+        } @else {
+          <div class="cust-find">
+            <input
+              placeholder="👤 Customer name or phone…"
+              [(ngModel)]="custSearch"
+              (ngModelChange)="searchCustomers($event)"
+              name="csearch"
+            />
+            <button type="button" class="tbtn" (click)="newCustOpen.set(!newCustOpen())">+ New</button>
+          </div>
+          @if (custResults().length) {
+            <div class="cust-results">
+              @for (r of custResults(); track r._id) {
+                <button type="button" class="crow" (click)="selectCustomer(r)">
+                  <span>{{ r.name }}@if (r.phone) {<small> · {{ r.phone }}</small>}</span>
+                  <span class="muted">💰{{ fmt(r.walletMinor) }} ⭐{{ r.loyaltyPoints }}</span>
+                </button>
+              }
+            </div>
+          }
+          @if (newCustOpen()) {
+            <div class="cust-new">
+              <input placeholder="Name" [(ngModel)]="newCustName" name="cname" />
+              <input placeholder="Phone" inputmode="tel" [(ngModel)]="newCustPhone" name="cphone" />
+              <button type="button" class="tbtn primary" (click)="createCustomer()" [disabled]="busy() || !newCustName.trim()">Save</button>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- discount -->
+      <div class="panel">
+        <div class="drow">
+          <span class="dlabel">Discount</span>
+          @for (p of [5, 10, 15]; track p) {
+            <button type="button" class="tbtn" [class.on]="discountPct() === p" (click)="setPct(p)">{{ p }}%</button>
+          }
+          <input class="mini" inputmode="decimal" placeholder="Amount" [ngModel]="discountAmtStr()" (ngModelChange)="discountAmtStr.set($event); discountPct.set(0)" name="damt" />
+          @if (discountPct() || parse(discountAmtStr()) > 0) {
+            <button type="button" class="tbtn" (click)="clearDiscount()">✕</button>
+          }
+        </div>
+      </div>
+
+      <!-- totals -->
+      <div class="panel totals">
+        <div class="trow"><span>Subtotal</span><span>{{ fmt(calc().subtotalMinor) }}</span></div>
+        @if (calc().discountMinor > 0) {
+          <div class="trow disc"><span>Discount</span><span>−{{ fmt(calc().discountMinor) }}</span></div>
+        }
+        @for (t of calc().taxByRate; track t.rateBps) {
+          <div class="trow"><span>Tax {{ t.rateBps / 100 }}%</span><span>{{ fmt(t.taxMinor) }}</span></div>
+        }
+        <div class="trow grand"><span>TOTAL</span><span>{{ fmt(calc().totalMinor) }}</span></div>
+      </div>
+
+      <!-- payment -->
+      <div class="panel">
+        <div class="prow">
+          <span class="plabel">💵 Cash</span>
+          <input class="pin" inputmode="decimal" [ngModel]="cashStr()" (ngModelChange)="cashStr.set($event)" name="cash" placeholder="0.00" />
+          <button type="button" class="tbtn" (click)="cashExact()">Exact</button>
+        </div>
+        <div class="quick">
+          @for (q of [1, 5, 10, 20, 50, 100]; track q) {
+            <button type="button" class="tbtn" (click)="cashAdd(q)">+{{ q }}</button>
+          }
+          <button type="button" class="tbtn" (click)="cashStr.set('')">C</button>
+        </div>
+        <div class="prow">
+          <span class="plabel">💳 Card</span>
+          <input class="pin" inputmode="decimal" [ngModel]="cardStr()" (ngModelChange)="cardStr.set($event)" name="card" placeholder="0.00" />
+          <button type="button" class="tbtn" (click)="cardExact()">Exact</button>
+        </div>
+        @if (customer(); as cu) {
+          <div class="prow">
+            <button type="button" class="paybtn" [class.on]="useWallet()" [disabled]="cu.walletMinor <= 0 || !queue.online()" (click)="useWallet.set(!useWallet())">
+              💰 Wallet @if (useWallet()) { −{{ fmt(walletApplied()) }} } @else { ({{ fmt(cu.walletMinor) }}) }
+            </button>
+            <button type="button" class="paybtn" [class.on]="usePoints()" [disabled]="cu.loyaltyPoints <= 0 || !queue.online()" (click)="usePoints.set(!usePoints())">
+              ⭐ Points @if (usePoints()) { −{{ fmt(pointsApplied()) }} } @else { ({{ cu.loyaltyPoints }}) }
+            </button>
+          </div>
+        }
+        @if (remaining() > 0 && cart().length) {
+          <div class="trow due"><span>Still due</span><span>{{ fmt(remaining()) }}</span></div>
+        }
+        @if (change() > 0) {
+          <div class="trow change"><span>Change</span><span>{{ fmt(change()) }}</span></div>
+        }
+        <button type="button" class="charge" (click)="checkout()" [disabled]="cart().length === 0 || busy() || paid() < calc().totalMinor">
+          {{ busy() ? 'Processing…' : (queue.online() ? 'CHARGE  ' : 'CHARGE OFFLINE  ') + fmt(calc().totalMinor) }}
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ======= held bills overlay ======= -->
+  @if (holdsOpen()) {
+    <div class="overlay" (click)="holdsOpen.set(false)">
+      <div class="sheet" (click)="$event.stopPropagation()">
+        <h2>⏸ Held bills</h2>
+        @for (h of holds(); track h.id) {
+          <div class="hrow">
+            <div>
+              <b>{{ h.label }}</b>
+              <span class="muted"> · {{ h.cart.length }} item(s) · {{ h.at.slice(11, 16) }}</span>
+            </div>
+            <button type="button" class="tbtn primary" (click)="resumeHold(h)">Resume</button>
+            <button type="button" class="tbtn" (click)="deleteHold(h)">✕</button>
+          </div>
+        } @empty {
+          <p class="muted">Nothing on hold. Use “Hold bill” to park a sale and serve the next customer.</p>
+        }
+        <button type="button" class="tbtn" style="margin-top: 12px" (click)="holdsOpen.set(false)">Close</button>
+      </div>
+    </div>
+  }
+
+  <!-- ======= sale done overlay ======= -->
+  @if (done(); as d) {
+    <div class="overlay" (click)="dismissDone()">
+      <div class="doneCard">
+        <div class="done-check">✔</div>
+        <h2>{{ d.saleNumber }}</h2>
+        @if (d.changeMinor > 0) {
+          <div class="done-change">Change<br /><b>{{ fmt(d.changeMinor) }}</b></div>
+        } @else {
+          <div class="done-change"><b>Paid in full</b></div>
+        }
+        @if (d.loyaltyEarned > 0) {
+          <p>⭐ Customer earned {{ d.loyaltyEarned }} points</p>
+        }
+        @if (d.offline) {
+          <p class="muted">Saved offline — will sync automatically.</p>
+        }
+        <p class="muted">Tap anywhere for next customer</p>
+      </div>
+    </div>
+  }
+</div>

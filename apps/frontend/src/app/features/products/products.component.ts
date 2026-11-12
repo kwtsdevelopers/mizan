@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, errMsg, fmtMinor, parseMinor } from '../../core/api.service';
+import { UiSelectComponent } from '../../ui/ui-select.component';
 
 interface Product {
   _id: string;
@@ -23,77 +24,8 @@ interface Category {
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [FormsModule],
-  template: `
-    <h1>Products</h1>
-    <div class="card">
-      <div class="toolbar">
-        <input name="search" [(ngModel)]="search" placeholder="Search name / SKU / barcode" (keyup.enter)="load()" style="max-width: 320px" />
-        <button class="btn" (click)="load()">Search</button>
-        <span class="spacer"></span>
-        <button class="btn btn-primary" (click)="startNew()">New product</button>
-      </div>
-      @if (error()) {
-        <p class="error-text">{{ error() }}</p>
-      }
-      <table class="grid">
-        <thead>
-          <tr><th>SKU</th><th>Name</th><th>Kind</th><th class="num">Price</th><th class="num">Tax %</th><th>Status</th><th></th></tr>
-        </thead>
-        <tbody>
-          @for (p of products(); track p._id) {
-            <tr>
-              <td>{{ p.sku }}</td>
-              <td>{{ p.name }}</td>
-              <td>{{ p.kind }}</td>
-              <td class="num">{{ fmt(p.priceMinor) }}</td>
-              <td class="num">{{ p.taxRateBps / 100 }}</td>
-              <td>
-                <span class="badge" [class.badge-ok]="p.status === 'active'" [class.badge-muted]="p.status !== 'active'">
-                  {{ p.status === 'active' ? 'Active' : 'Archived' }}
-                </span>
-              </td>
-              <td class="toolbar" style="margin: 0">
-                <button class="btn btn-sm" (click)="edit(p)">Edit</button>
-                @if (p.status === 'active') {
-                  <button class="btn btn-sm btn-danger" (click)="archive(p)">Archive</button>
-                }
-              </td>
-            </tr>
-          } @empty {
-            <tr><td colspan="7" class="muted">No products found.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    @if (form(); as f) {
-      <div class="card">
-        <h2>{{ f._id ? 'Edit product' : 'New product' }}</h2>
-        <div class="row">
-          <div><label>SKU</label><input name="sku" [(ngModel)]="f.sku" [disabled]="!!f._id" /></div>
-          <div><label>Name</label><input name="name" [(ngModel)]="f.name" /></div>
-          <div>
-            <label>Kind</label>
-            <select name="kind" [(ngModel)]="f.kind" [disabled]="!!f._id">
-              <option value="standard">Standard (per piece)</option>
-              <option value="weighted">Weighted (per kg)</option>
-            </select>
-          </div>
-        </div>
-        <div class="row">
-          <div><label>Price</label><input name="price" [(ngModel)]="f.price" inputmode="decimal" /></div>
-          <div><label>Cost</label><input name="cost" [(ngModel)]="f.cost" inputmode="decimal" /></div>
-          <div><label>Tax rate %</label><input name="tax" [(ngModel)]="f.taxPct" inputmode="decimal" /></div>
-          <div><label>Barcodes (comma-separated)</label><input name="barcodes" [(ngModel)]="f.barcodesText" /></div>
-        </div>
-        <div class="toolbar" style="margin-top: 12px">
-          <button class="btn btn-primary" (click)="save()" [disabled]="busy()">Save</button>
-          <button class="btn" (click)="form.set(null)">Cancel</button>
-        </div>
-      </div>
-    }
-  `,
+  imports: [FormsModule, UiSelectComponent],
+  templateUrl: './products.component.html',
 })
 export class ProductsComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -114,6 +46,10 @@ export class ProductsComponent implements OnInit {
 
   search = '';
   readonly fmt = fmtMinor;
+  readonly kindOptions = [
+    { value: 'standard', label: 'Standard (per piece)' },
+    { value: 'weighted', label: 'Weighted (per kg)' },
+  ];
 
   async ngOnInit(): Promise<void> {
     await this.load();

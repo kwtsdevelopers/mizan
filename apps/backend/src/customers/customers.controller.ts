@@ -10,12 +10,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEmail, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { isValidObjectId } from 'mongoose';
 import { ModuleId, Permission } from '@mizan/shared';
 import { CurrentAuth, RequireModules, RequirePermissions } from '../auth/decorators';
 import { AuthUser } from '../auth/auth-user';
 import { TenantAccessService } from '../database/tenant-access.service';
+import { AuditService } from '../audit/audit.service';
 import { Paginated, PaginationQueryDto } from '../common/pagination';
 
 class CustomerDto {
@@ -75,12 +77,39 @@ class UpdateCustomerDto {
   status?: 'active' | 'archived';
 }
 
+class WalletTopUpDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  amountMinor!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  note?: string;
+}
+
+class LoyaltyAddDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  points!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  note?: string;
+}
+
 @ApiTags('customers')
 @ApiBearerAuth()
 @RequireModules(ModuleId.Customers)
 @Controller('customers')
 export class CustomersController {
-  constructor(private readonly tenantAccess: TenantAccessService) {}
+  constructor(
+    private readonly tenantAccess: TenantAccessService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Get()
   @RequirePermissions(Permission.CustomersRead)
@@ -126,5 +155,61 @@ export class CustomersController {
     const updated = await models.customers.findByIdAndUpdate(id, { $set: { ...dto } }, { new: true });
     if (!updated) throw new NotFoundException('Customer not found');
     return updated.toObject();
+  }
+
+  @Get(':id')
+  @RequirePermissions(Permission.CustomersRead)
+  async get(@CurrentAuth() user: AuthUser, @Param('id') id: string): Promise<unknown> {
+    if (!isValidObjectId(id)) throw new BadRequestException('Invalid id');
+    const models = await this.tenantAccess.modelsFor(user.tenantId!);
+    const customer = await models.customers.findById(id).lean();
+    if (!customer) throw new NotFoundException('Customer not found');
+    return customer;
+  }
+
+  @Post(':id/wallet')
+  @RequirePermissions(Permission.CustomersWrite)
+  async topUpWallet(
+    @CurrentAuth() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: WalletTopUpDto,
+  ): Promise<unknown> {
+    if (!isValidObjectId(id)) throw new BadRequestException('Invalid id');
+    const models = await this.tenantAccess.modelsFor(user.tenantId!);
+    const updated = await models.customers
+      .findByIdAndUpdate(id, { $inc: { walletMinor: dto.amountMinor } }, { new: true })
+      .lean();
+    if (!updated) throw new NotFoundException('Customer not found');
+    await this.audit.record(models, {
+      actorId: user.userId,
+      action: 'customer.wallet_topup',
+      entityType: 'customer',
+      entityId: id,
+      details: { amountMinor: dto.amountMinor, note: dto.note, balanceMinor: updated.walletMinor },
+    });
+    return updated;
+  }
+
+  @Post(':id/loyalty')
+  @RequirePermissions(Permission.CustomersWrite)
+  async addLoyaltyPoints(
+    @CurrentAuth() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: LoyaltyAddDto,
+  ): Promise<unknown> {
+    if (!isValidObjectId(id)) throw new BadRequestException('Invalid id');
+    const models = await this.tenantAccess.modelsFor(user.tenantId!);
+    const updated = await models.customers
+      .findByIdAndUpdate(id, { $inc: { loyaltyPoints: dto.points } }, { new: true })
+      .lean();
+    if (!updated) throw new NotFoundException('Customer not found');
+    await this.audit.record(models, {
+      actorId: user.userId,
+      action: 'customer.loyalty_added',
+      entityType: 'customer',
+      entityId: id,
+      details: { points: dto.points, note: dto.note, loyaltyPoints: updated.loyaltyPoints },
+    });
+    return updated;
   }
 }

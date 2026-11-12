@@ -1,0 +1,207 @@
+
+<div class="toolbar">
+  <h1 style="margin: 0">Platform console</h1>
+  <span class="spacer"></span>
+  <button class="btn btn-primary" (click)="toggleCreate()">
+    {{ form() ? 'Close' : '+ New tenant' }}
+  </button>
+</div>
+
+@if (error()) {
+  <p class="error-text">{{ error() }}</p>
+}
+@if (message()) {
+  <p class="muted" style="color: var(--c-ok)">{{ message() }}</p>
+}
+
+<!-- ===== Create tenant (full onboarding) ===== -->
+@if (form(); as f) {
+  <div class="card">
+    <h2>Create tenant</h2>
+    <div class="row">
+      <div>
+        <label>Business name</label>
+        <input [(ngModel)]="f.name" (ngModelChange)="onNameChange(f)" placeholder="Green Valley Market" />
+      </div>
+      <div>
+        <label>Business ID (slug)</label>
+        <input [(ngModel)]="f.slug" (ngModelChange)="f.slugTouched = true" placeholder="green-valley" />
+      </div>
+      <div>
+        <label>Industry</label>
+        <ui-select name="industry" [(ngModel)]="f.industry" (ngModelChange)="onIndustryChange(f)" [options]="industryOptions()" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Plan</label>
+        <ui-select name="planId" [(ngModel)]="f.planId" [options]="planOptions()" />
+      </div>
+      <div>
+        <label>Billing period</label>
+        <ui-select name="billingPeriod" [(ngModel)]="f.billingPeriod" [options]="billingOptions" />
+      </div>
+      <div>
+        <label>Currency</label>
+        <input [(ngModel)]="f.currency" maxlength="3" placeholder="USD" />
+      </div>
+      <div>
+        <label>Timezone</label>
+        <input [(ngModel)]="f.timezone" placeholder="Asia/Qatar" />
+      </div>
+    </div>
+
+    @if (selectedPlan(); as p) {
+      <div class="card" style="margin: 12px 0; background: var(--c-bg)">
+        <strong>{{ p.name }}</strong>
+        <span class="muted">
+          — {{ money(p.priceMonthlyMinor, p.currency) }}/mo or {{ money(p.priceAnnualMinor, p.currency) }}/yr
+          · {{ p.trialDays }}-day trial
+          · up to {{ p.limits.maxUsers }} users, {{ p.limits.maxBranches }} branches, {{ p.limits.maxRegisters }} registers
+        </span>
+        <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap">
+          @for (m of p.modules; track m) {
+            <span class="badge badge-ok" [title]="moduleDesc(m)">{{ moduleName(m) }}</span>
+          }
+        </div>
+      </div>
+    }
+
+    <h2 style="margin-top: 16px">Tenant administrator</h2>
+    <div class="row">
+      <div>
+        <label>Name</label>
+        <input [(ngModel)]="f.adminName" placeholder="Store Owner" />
+      </div>
+      <div>
+        <label>Email</label>
+        <input [(ngModel)]="f.adminEmail" type="email" placeholder="owner@store.com" />
+      </div>
+      <div>
+        <label>Password (min 10 chars)</label>
+        <input [(ngModel)]="f.adminPassword" type="password" placeholder="••••••••••" />
+      </div>
+    </div>
+
+    <div class="toolbar" style="margin: 16px 0 0">
+      <button class="btn btn-primary" [disabled]="busy() || !canSubmit(f)" (click)="create(f)">
+        {{ busy() ? 'Provisioning…' : 'Create tenant' }}
+      </button>
+      <button class="btn" (click)="form.set(null)">Cancel</button>
+      @if (!canSubmit(f)) {
+        <span class="muted">Fill all fields — slug ≥ 3 chars (a-z, 0-9, hyphen), password ≥ 10 chars.</span>
+      }
+    </div>
+  </div>
+}
+
+<!-- ===== Tenants ===== -->
+<div class="card">
+  <h2>Tenants</h2>
+  <table class="grid">
+    <thead>
+      <tr><th>Name</th><th>Slug</th><th>Industry</th><th>Status</th><th>Currency</th><th>Created</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (t of tenants(); track t.tenantId) {
+        <tr>
+          <td>{{ t.name }}</td>
+          <td><code>{{ t.slug }}</code></td>
+          <td>{{ industryLabel(t.industry) }}</td>
+          <td>
+            <span class="badge"
+              [class.badge-ok]="t.status === 'active'"
+              [class.badge-warn]="t.status === 'provisioning'"
+              [class.badge-danger]="t.status === 'suspended'">
+              {{ t.status }}
+            </span>
+          </td>
+          <td>{{ t.currency }}</td>
+          <td>{{ t.createdAt | date: 'short' }}</td>
+          <td class="toolbar" style="margin: 0">
+            <button class="btn btn-sm" (click)="toggleDetail(t)">
+              {{ expanded() === t.tenantId ? 'Hide' : 'Details' }}
+            </button>
+            @if (t.status === 'active') {
+              <button class="btn btn-sm btn-danger" (click)="suspend(t)">Suspend</button>
+            }
+            @if (t.status === 'suspended') {
+              <button class="btn btn-sm btn-primary" (click)="reactivate(t)">Reactivate</button>
+            }
+            @if (t.status === 'provisioning') {
+              <button class="btn btn-sm" (click)="retry(t)">Retry provisioning</button>
+            }
+          </td>
+        </tr>
+        @if (expanded() === t.tenantId) {
+          <tr>
+            <td colspan="7" style="background: var(--c-bg)">
+              @if (detail(); as d) {
+                @if (d.subscription; as s) {
+                  <p style="margin: 4px 0">
+                    <strong>Subscription:</strong> {{ s.planId }}
+                    <span class="badge"
+                      [class.badge-ok]="s.status === 'active' || s.status === 'trial'"
+                      [class.badge-warn]="s.status === 'past_due'"
+                      [class.badge-danger]="s.status === 'canceled' || s.status === 'expired'">
+                      {{ s.status }}
+                    </span>
+                    · {{ s.billingPeriod }} · period ends {{ s.currentPeriodEndsAt | date: 'mediumDate' }}
+                  </p>
+                } @else {
+                  <p class="muted" style="margin: 4px 0">No subscription found.</p>
+                }
+                <p style="margin: 6px 0 2px"><strong>Enabled modules:</strong></p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                  @for (m of d.enabledModules; track m) {
+                    <span class="badge badge-ok" [title]="moduleDesc(m)">{{ moduleName(m) }}</span>
+                  } @empty {
+                    <span class="muted">None — subscription inactive or expired.</span>
+                  }
+                </div>
+                <p class="muted" style="margin: 10px 0 2px">
+                  Tenant sign-in: Business ID <code>{{ t.slug }}</code> at the login page ("My business").
+                </p>
+              } @else {
+                <span class="muted">Loading…</span>
+              }
+            </td>
+          </tr>
+        }
+      } @empty {
+        <tr><td colspan="7" class="muted">No tenants yet — create the first one above.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== Plan catalog ===== -->
+<div class="card">
+  <h2>Plan catalog</h2>
+  <table class="grid">
+    <thead>
+      <tr><th>Plan</th><th>Industry</th><th class="num">Monthly</th><th class="num">Annual</th><th class="num">Trial</th><th>Limits</th><th>Modules</th></tr>
+    </thead>
+    <tbody>
+      @for (p of plans(); track p.planId) {
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ industryLabel(p.industry) }}</td>
+          <td class="num">{{ money(p.priceMonthlyMinor, p.currency) }}</td>
+          <td class="num">{{ money(p.priceAnnualMinor, p.currency) }}</td>
+          <td class="num">{{ p.trialDays }}d</td>
+          <td>{{ p.limits.maxUsers }}u / {{ p.limits.maxBranches }}b / {{ p.limits.maxRegisters }}r</td>
+          <td>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap">
+              @for (m of p.modules; track m) {
+                <span class="badge badge-muted" [title]="moduleDesc(m)">{{ moduleName(m) }}</span>
+              }
+            </div>
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="7" class="muted">No plans. Restart the backend to seed default plans.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

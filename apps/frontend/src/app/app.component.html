@@ -1,0 +1,44 @@
+
+@if (auth.isLoggedIn() && !isLoginRoute()) {
+  <div class="shell" [class]="'shell pos-' + navPos()">
+    <aside class="bar">
+      <div class="brand" title="Mizan">M</div>
+
+      <nav>
+        @if (!auth.isPlatform()) {
+          @for (item of tenantNav; track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="active" [title]="item.label" [attr.aria-label]="item.label">
+              <span class="ic">{{ item.icon }}</span>
+              <span class="tip">{{ item.label }}</span>
+            </a>
+          }
+        } @else {
+          <a routerLink="/platform" routerLinkActive="active" title="Tenants" aria-label="Tenants">
+            <span class="ic">🏛️</span>
+            <span class="tip">Tenants</span>
+          </a>
+        }
+      </nav>
+
+      <div class="foot">
+        @if (!auth.isPlatform() && queue.pendingCount() > 0) {
+          <span class="pending" title="Sales waiting to sync">{{ queue.pendingCount() }}</span>
+        }
+
+        <div class="posctl" role="group" aria-label="Menu position">
+          <button [class.on]="navPos() === 'left'" (click)="setNavPos('left')" title="Menu on left">⇤</button>
+          <button [class.on]="navPos() === 'top'" (click)="setNavPos('top')" title="Menu on top">⤒</button>
+          <button [class.on]="navPos() === 'right'" (click)="setNavPos('right')" title="Menu on right">⇥</button>
+        </div>
+
+        <button class="out" (click)="auth.logout()" title="Sign out" aria-label="Sign out">
+          <span class="ic">⏻</span>
+          <span class="tip">Sign out</span>
+        </button>
+      </div>
+    </aside>
+    <main class="content"><router-outlet /></main>
+  </div>
+} @else {
+  <router-outlet />
+}

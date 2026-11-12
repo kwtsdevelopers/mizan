@@ -161,47 +161,60 @@ export function validateModuleSet(modules: ModuleId[], industry: Industry): stri
   return errors;
 }
 
+/** Shared module sets used to assemble default plans. */
+const BASIC_MODULES: ModuleId[] = [
+  ModuleId.Catalog,
+  ModuleId.Inventory,
+  ModuleId.Sales,
+  ModuleId.Customers,
+  ModuleId.Reporting,
+  ModuleId.CashManagement,
+];
+const PRO_MODULES: ModuleId[] = [
+  ...BASIC_MODULES,
+  ModuleId.Suppliers,
+  ModuleId.Purchasing,
+  ModuleId.OfflinePos,
+];
+
+function industryPlans(
+  industry: Industry,
+  label: string,
+  extraModules: ModuleId[] = [],
+): PlanDefinition[] {
+  return [
+    {
+      planId: `${industry}_basic`,
+      name: `${label} Basic`,
+      industry,
+      modules: [...BASIC_MODULES, ...extraModules],
+      limits: { maxUsers: 5, maxBranches: 1, maxRegisters: 2 },
+      priceMonthlyMinor: 4900,
+      priceAnnualMinor: 49000,
+      currency: 'USD',
+      trialDays: 14,
+    },
+    {
+      planId: `${industry}_pro`,
+      name: `${label} Pro`,
+      industry,
+      modules: [...PRO_MODULES, ...extraModules],
+      limits: { maxUsers: 25, maxBranches: 5, maxRegisters: 10 },
+      priceMonthlyMinor: 14900,
+      priceAnnualMinor: 149000,
+      currency: 'USD',
+      trialDays: 14,
+    },
+  ];
+}
+
 /** Default commercial plans seeded into the control plane. Prices are examples. */
 export const DEFAULT_PLANS: PlanDefinition[] = [
-  {
-    planId: 'supermarket_basic',
-    name: 'Supermarket Basic',
-    industry: Industry.Supermarket,
-    modules: [
-      ModuleId.Catalog,
-      ModuleId.Inventory,
-      ModuleId.Sales,
-      ModuleId.Customers,
-      ModuleId.Reporting,
-      ModuleId.CashManagement,
-      ModuleId.SupermarketOps,
-    ],
-    limits: { maxUsers: 5, maxBranches: 1, maxRegisters: 2 },
-    priceMonthlyMinor: 4900,
-    priceAnnualMinor: 49000,
-    currency: 'USD',
-    trialDays: 14,
-  },
-  {
-    planId: 'supermarket_pro',
-    name: 'Supermarket Pro',
-    industry: Industry.Supermarket,
-    modules: [
-      ModuleId.Catalog,
-      ModuleId.Inventory,
-      ModuleId.Sales,
-      ModuleId.Customers,
-      ModuleId.Suppliers,
-      ModuleId.Purchasing,
-      ModuleId.Reporting,
-      ModuleId.CashManagement,
-      ModuleId.OfflinePos,
-      ModuleId.SupermarketOps,
-    ],
-    limits: { maxUsers: 25, maxBranches: 5, maxRegisters: 10 },
-    priceMonthlyMinor: 14900,
-    priceAnnualMinor: 149000,
-    currency: 'USD',
-    trialDays: 14,
-  },
+  // SupermarketOps is the only industry module implemented today.
+  ...industryPlans(Industry.Supermarket, 'Supermarket', [ModuleId.SupermarketOps]),
+  ...industryPlans(Industry.Restaurant, 'Restaurant'),
+  ...industryPlans(Industry.Retail, 'Retail'),
+  ...industryPlans(Industry.Pharmacy, 'Pharmacy'),
+  ...industryPlans(Industry.Rental, 'Rental'),
+  ...industryPlans(Industry.Hospitality, 'Hospitality'),
 ];

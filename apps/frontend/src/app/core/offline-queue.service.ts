@@ -17,6 +17,7 @@ export interface PendingSale {
   }>;
   payments: Array<{ method: string; amountMinor: number }>;
   totalMinor: number;
+  customerId?: string;
   attempts: number;
   lastError?: string;
 }
@@ -71,6 +72,7 @@ export class OfflineQueueService {
           occurredAt: p.occurredAt,
           lines: p.lines.map(({ name, ...l }) => ({ ...l, description: name })),
           payments: p.payments,
+          customerId: p.customerId,
         })),
       });
       let applied = 0;

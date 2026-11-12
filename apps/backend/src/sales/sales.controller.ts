@@ -52,8 +52,8 @@ class CheckoutLineDto {
 }
 
 class PaymentDto {
-  @IsIn(['cash', 'card', 'other'])
-  method!: 'cash' | 'card' | 'other';
+  @IsIn(['cash', 'card', 'wallet', 'loyalty', 'other'])
+  method!: 'cash' | 'card' | 'wallet' | 'loyalty' | 'other';
 
   @Type(() => Number)
   @IsInt()

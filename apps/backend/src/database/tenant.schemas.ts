@@ -120,6 +120,10 @@ export const customerSchema = new Schema(
     address: { type: String, maxlength: 400 },
     status: { type: String, required: true, enum: ['active', 'archived'], default: 'active' },
     notes: { type: String, maxlength: 1000 },
+    /** prepaid store-credit balance in minor units */
+    walletMinor: { type: Number, required: true, default: 0 },
+    /** loyalty points; 1 point = 1 minor unit when redeemed */
+    loyaltyPoints: { type: Number, required: true, default: 0 },
   },
   { collection: 'customers', versionKey: false, timestamps: true },
 );
@@ -191,7 +195,7 @@ const saleLineSchema = new Schema(
 
 const salePaymentSchema = new Schema(
   {
-    method: { type: String, required: true, enum: ['cash', 'card', 'other'] },
+    method: { type: String, required: true, enum: ['cash', 'card', 'wallet', 'loyalty', 'other'] },
     amountMinor: { type: Number, required: true },
     reference: { type: String, maxlength: 120 },
   },

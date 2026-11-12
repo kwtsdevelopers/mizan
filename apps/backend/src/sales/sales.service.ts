@@ -22,13 +22,15 @@ export interface CheckoutLineInput {
   discountMinor: number;
 }
 
+export type PaymentMethod = 'cash' | 'card' | 'wallet' | 'loyalty' | 'other';
+
 export interface CheckoutInput {
   clientTxId: string;
   branchId: string;
   registerId: string;
   customerId?: string;
   lines: CheckoutLineInput[];
-  payments: { method: 'cash' | 'card' | 'other'; amountMinor: number; reference?: string }[];
+  payments: { method: PaymentMethod; amountMinor: number; reference?: string }[];
   note?: string;
 }
 
@@ -38,7 +40,11 @@ export interface CheckoutResult {
   totalMinor: number;
   changeMinor: number;
   duplicate: boolean;
+  loyaltyEarned: number;
 }
+
+/** Loyalty accrual: 1 point per 100 minor units spent; 1 point = 1 minor unit on redemption. */
+const LOYALTY_EARN_DIVISOR = 100;
 
 @Injectable()
 export class SalesService {
@@ -60,6 +66,7 @@ export class SalesService {
         totalMinor: existing.totalMinor,
         changeMinor: existing.changeMinor,
         duplicate: true,
+        loyaltyEarned: 0,
       };
     }
 
@@ -110,6 +117,25 @@ export class SalesService {
       throw new BadRequestException('Change exceeds cash tendered');
     }
 
+    // Wallet / loyalty payments require an attached customer with sufficient balance.
+    const walletSpend = sumByMethod(input.payments, 'wallet');
+    const pointsSpend = sumByMethod(input.payments, 'loyalty');
+    if (walletSpend > 0 || pointsSpend > 0) {
+      if (!input.customerId || !isValidObjectId(input.customerId)) {
+        throw new BadRequestException('A customer must be selected for wallet or points payment');
+      }
+      const customer = await models.customers.findById(input.customerId).lean();
+      if (!customer || customer.status !== 'active') {
+        throw new BadRequestException('Customer not found');
+      }
+      if ((customer.walletMinor ?? 0) < walletSpend) {
+        throw new BadRequestException('Insufficient wallet balance');
+      }
+      if ((customer.loyaltyPoints ?? 0) < pointsSpend) {
+        throw new BadRequestException('Insufficient loyalty points');
+      }
+    }
+
     const saleNumber = await this.nextSaleNumber(models, input.branchId);
 
     let saleId: string;
@@ -143,6 +169,7 @@ export class SalesService {
             totalMinor: dup.totalMinor,
             changeMinor: dup.changeMinor,
             duplicate: true,
+            loyaltyEarned: 0,
           };
         }
       }
@@ -151,7 +178,15 @@ export class SalesService {
 
     await this.deductStock(models, cashierId, input.clientTxId, saleId, input.branchId, saleLines);
 
-    return { saleId, saleNumber, totalMinor: totals.totalMinor, changeMinor, duplicate: false };
+    const loyaltyEarned = await this.applyCustomerLedger(
+      models,
+      input.customerId,
+      input.payments,
+      totals.totalMinor,
+      null,
+    );
+
+    return { saleId, saleNumber, totalMinor: totals.totalMinor, changeMinor, duplicate: false, loyaltyEarned };
   }
 
   /**
@@ -310,7 +345,8 @@ export class SalesService {
       saleLines,
     );
     warnings.push(...stockWarnings);
-    if (stockWarnings.length > 0) {
+    await this.applyCustomerLedger(models, sub.customerId, sub.payments, totals.totalMinor, warnings);
+    if (warnings.length > 0) {
       await models.sales.updateOne({ _id: saleId }, { $set: { syncWarnings: warnings } });
     }
 
@@ -476,4 +512,37 @@ export class SalesService {
     const prefix = kind === 'refund' ? 'RF' : 'S';
     return `${prefix}-${String(counter.seq).padStart(8, '0')}`;
   }
+
+  /** Deduct wallet/points payments and accrue earned points. Returns points earned. */
+  private async applyCustomerLedger(
+    models: TenantModels,
+    customerId: string | null | undefined,
+    payments: { method: string; amountMinor: number }[],
+    totalMinor: number,
+    warnings: string[] | null,
+  ): Promise<number> {
+    if (!customerId || !isValidObjectId(customerId)) return 0;
+    const walletSpend = sumByMethod(payments, 'wallet');
+    const pointsSpend = sumByMethod(payments, 'loyalty');
+    const earned = Math.max(Math.floor(totalMinor / LOYALTY_EARN_DIVISOR), 0);
+    const updated = await models.customers
+      .findByIdAndUpdate(
+        customerId,
+        { $inc: { walletMinor: -walletSpend, loyaltyPoints: earned - pointsSpend } },
+        { new: true },
+      )
+      .lean();
+    if (!updated) {
+      warnings?.push('Customer not found; wallet/loyalty not applied');
+      return 0;
+    }
+    if ((updated.walletMinor ?? 0) < 0 || (updated.loyaltyPoints ?? 0) < 0) {
+      warnings?.push('Customer wallet/points balance went negative (offline sale)');
+    }
+    return earned;
+  }
+}
+
+function sumByMethod(payments: { method: string; amountMinor: number }[], method: string): number {
+  return payments.filter((p) => p.method === method).reduce((s, p) => s + p.amountMinor, 0);
 }

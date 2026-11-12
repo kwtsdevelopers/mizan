@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, errMsg } from '../../core/api.service';
+import { UiSelectComponent } from '../../ui/ui-select.component';
 
 interface Supplier {
   _id: string;
@@ -13,63 +14,8 @@ interface Supplier {
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [FormsModule],
-  template: `
-    <h1>Suppliers</h1>
-    <div class="card">
-      <div class="toolbar">
-        <span class="spacer"></span>
-        <button class="btn btn-primary" (click)="startNew()">New supplier</button>
-      </div>
-      @if (error()) {
-        <p class="error-text">{{ error() }}</p>
-      }
-      <table class="grid">
-        <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          @for (s of suppliers(); track s._id) {
-            <tr>
-              <td>{{ s.name }}</td>
-              <td>{{ s.phone }}</td>
-              <td>{{ s.email }}</td>
-              <td>
-                <span class="badge" [class.badge-ok]="s.status === 'active'" [class.badge-muted]="s.status !== 'active'">
-                  {{ s.status === 'active' ? 'Active' : 'Archived' }}
-                </span>
-              </td>
-              <td><button class="btn btn-sm" (click)="edit(s)">Edit</button></td>
-            </tr>
-          } @empty {
-            <tr><td colspan="5" class="muted">No suppliers.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    @if (form(); as f) {
-      <div class="card">
-        <h2>{{ f._id ? 'Edit supplier' : 'New supplier' }}</h2>
-        <div class="row">
-          <div><label>Name</label><input name="name" [(ngModel)]="f.name" /></div>
-          <div><label>Phone</label><input name="phone" [(ngModel)]="f.phone" /></div>
-          <div><label>Email</label><input name="email" [(ngModel)]="f.email" /></div>
-          @if (f._id) {
-            <div>
-              <label>Status</label>
-              <select name="status" [(ngModel)]="f.status">
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-          }
-        </div>
-        <div class="toolbar" style="margin-top: 12px">
-          <button class="btn btn-primary" (click)="save()" [disabled]="busy()">Save</button>
-          <button class="btn" (click)="form.set(null)">Cancel</button>
-        </div>
-      </div>
-    }
-  `,
+  imports: [FormsModule, UiSelectComponent],
+  templateUrl: './suppliers.component.html',
 })
 export class SuppliersComponent implements OnInit {
   private readonly api = inject(ApiService);
@@ -78,6 +24,10 @@ export class SuppliersComponent implements OnInit {
   readonly error = signal('');
   readonly busy = signal(false);
   readonly form = signal<{ _id?: string; name: string; phone: string; email: string; status: 'active' | 'archived' } | null>(null);
+  readonly statusOptions = [
+    { value: 'active', label: 'Active' },
+    { value: 'archived', label: 'Archived' },
+  ];
 
   async ngOnInit(): Promise<void> {
     await this.load();
